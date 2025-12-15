@@ -38,10 +38,6 @@ Convenience RPC:
 - **mns_outbox_delete** — Remove a single pending message  
 - **mns_outbox_clear** — Remove all queued messages  
 
-Background delivery:
-
-- **mns_outbox_process** — Node-side attempt to deliver queued messages when peers are available
-
 
 ## 4. MNS Presence (Online Status Layer)
 
