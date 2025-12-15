@@ -1,4 +1,4 @@
-# MNS Messaging – RPC Commands Overview
+# Megabytes MNS — Identity & Off-Chain Messaging RPC Overview
 
 > These RPC commands are provided for educational and developer testing purposes.  
 > A dedicated graphical user interface (GUI) will later handle all messaging features  
@@ -6,115 +6,61 @@
 
 Below is the complete list of RPC commands implemented for OFF-CHAIN encrypted messaging in the Megabytes wallet.
 
+## 1. MNS Identity (On-Chain)
 
-## 1. mns_encrypt
-Encrypt a plaintext message for a recipient (via their MNS nickname).
+- **mns_register** — Register a new MNS identity on-chain  
+- **mns_build** — Build a raw MNS registration transaction  
+- **mns_list** — List all known MNS identity records  
+- **mns_listmine** — List MNS identities belonging to the local wallet  
+- **mns_resolve** — Resolve a human-readable MNS name into its identity pubkey, address, and metadata  
 
-Usage:  
-``` mns_encrypt "<recipient nickname>" "<message>" ```
 
-Returns:  
-An encrypted ciphertext payload (MMSG) ready to be transmitted through the P2P network.
+## 2. Encrypted Off-Chain Messaging (Wallet)
 
----
+- **mns_encrypt** — Encrypt a message for a target MNS identity or address  
+- **mns_decrypt** — Decrypt a received MMSG payload using the wallet’s private keys  
+- **mns_inbox** — List stored MNS messages (incoming + sent) with filtering and search  
+- **mns_get_message** — Retrieve a specific message by `msgid`  
+- **mns_mark_read** — Mark a message as read or unread  
+- **mns_delete** — Delete a message from the local inbox  
+- **mns_inbox_stats** — Show inbox statistics (unread count, total messages, etc.)  
 
-## 2. mns_send
-Send a previously encrypted MMSG payload across the P2P network.
+Convenience RPC:
 
-Usage:  
-``` mns_send "<hex_ciphertext>" ```
+- **mns_send_offchain** — Resolve → encrypt → queue → store as “sent” (one-call end-to-end message sending)
 
-Note:  
-The plaintext message is never sent through this RPC.  
-Encryption must be performed beforehand via mns_encrypt.
 
----
+## 3. Wallet Outbox (Message Queue)
 
-## 3. mns_decrypt
-Decrypt an incoming MMSG payload and store it in the wallet inbox.
+- **mns_outbox_list** — List queued messages waiting for delivery  
+- **mns_outbox_add** — Manually queue a message (recipient_key_id + payload_hex)  
+- **mns_outbox_get** — Retrieve a specific queued entry by `msgid`  
+- **mns_outbox_delete** — Remove a single pending message  
+- **mns_outbox_clear** — Remove all queued messages  
 
-Usage:  
-``` mns_decrypt "<hex_ciphertext>" ```
+Background delivery:
 
-Behavior:  
-- Attempts decryption using the wallet’s private keys  
-- On success: stores a MNSStoredMessage entry locally  
-- Returns the plaintext message and metadata
+- **mns_outbox_process** — Node-side attempt to deliver queued messages when peers are available
 
----
 
-## 4. mns_inbox
-List stored OFF-CHAIN decrypted messages in the wallet.
+## 4. MNS Presence (Online Status Layer)
 
-Supports filtering, searching, and pagination.
+- **mns_presence_broadcast** — Wallet builds a CMNSPresence packet and signs it  
+- **mns_presence_push** — Broadcast a serialized presence packet to all peers  
+- **mns_presence_get** — Return the last known online status for an identity  
+- **mns_presence_list** *(optional future)* — List presences for all known identities  
 
-Usage:  
-``` mns_inbox [direction] [unread_only] [search] [limit] [offset] [read_filter] ```
+The P2P layer also listens for `MMSG_PRESENCE` and updates:
 
-Parameters:  
-- direction → "all" (default), "incoming", "sent"  
-- unread_only → true / false  
-- search → substring filter (case-insensitive)  
-- limit → max results (default 50, 0 = unlimited)  
-- offset → skip N results (pagination)  
-- read_filter → "all" (default), "unread", "read"
+- Last-seen time  
+- Peer who owns the identity  
+- Presence timestamp (anti-replay)  
 
-Examples:  
-``` mns_inbox ```
 
-``` mns_inbox incoming true "" 20 0 ```  
+## 5. Raw P2P Control (Debug / Developer Tools)
 
-``` mns_inbox all false "hello" 50 0 read ```
-
----
-
-## 5. mns_get_message
-Return a single stored message by its msgid.
-
-Usage:  
-``` mns_get_message "<msgid>" ```
-
-Returns:  
-Full metadata including read status, timestamp, plaintext, ciphertext, and keys.
-
----
-
-## 6. mns_mark_read
-Mark a message as read or unread.
-
-Usage:  
-``` mns_mark_read "<msgid>" true ``` 
-
-``` mns_mark_read "<msgid>" false ```
-
-Effects:  
-Updates the stored message entry and immediately affects inbox filters & statistics.
-
----
-
-## 7. mns_delete
-Remove a message from the wallet’s local inbox.
-
-Usage:  
-``` mns_delete "<msgid>" ```
-
-Behavior:  
-Irreversibly deletes the stored message from the wallet database.
-
----
-
-## 8. mns_inbox_stats
-Return aggregate statistics about the local MNS inbox.
-
-Usage:  
-``` mns_inbox_stats ```
-
-Returns:  
-- total  
-- read  
-- unread  
-- last_message_time  
-- incoming: { total, read, unread, last_message_time }  
-- sent: { total, read, unread, last_message_time }
-
+- **mns_send** — Broadcast a raw encrypted MMSG payload to all peers  
+- **mns_message_push** — Push an encrypted payload to a specific peer (NetMsgType::MMSG)  
+- **mns_message_sendtoid** — Send MMSG to the peer currently owning a given identity  
+- **mns_p2p_probe** — Developer tool to test INV, GETDATA, or direct MMSG push  
 ---
