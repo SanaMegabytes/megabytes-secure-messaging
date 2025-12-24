@@ -36,7 +36,8 @@ Convenience RPC:
 - **mns_outbox_add** — Manually queue a message (recipient_key_id + payload_hex)  
 - **mns_outbox_get** — Retrieve a specific queued entry by `msgid`  
 - **mns_outbox_delete** — Remove a single pending message  
-- **mns_outbox_clear** — Remove all queued messages  
+- **mns_outbox_clear** — Remove all queued messages
+- **mns_outbox_markdelivered** — Mark Delivered
 
 
 ## 4. MNS Presence (Online Status Layer)
