@@ -23,7 +23,9 @@ Below is the complete list of RPC commands implemented for OFF-CHAIN encrypted m
 - **mns_get_message** — Retrieve a specific message by `msgid`  
 - **mns_mark_read** — Mark a message as read or unread  
 - **mns_delete** — Delete a message from the local inbox  
-- **mns_inbox_stats** — Show inbox statistics (unread count, total messages, etc.)  
+- **mns_inbox_stats** — Show inbox statistics (unread count, total messages, etc.)
+- **mns_inbox_process_pending** - Try to decrypt wallet pending OFF-CHAIN MNS messages and move them into the wallet inbox.
+- **mns_inbox_pending_import** - Import ciphertext-only OFF-CHAIN MNS messages from the in-memory inbox into wallet pending storage.
 
 Convenience RPC:
 
