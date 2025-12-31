@@ -292,6 +292,235 @@ Future policy (recommended):
 - Verify sender signature after successful decrypt (optional)
 - Resolve sender pubkey from MNS index via `sender_kid`
 - Mark sender as “known/verified” in UI when signature passes
+- 
+## 6.9) Off-chain inbox snapshot database (security & limits)
+
+The MNS off-chain inbox uses a **disk-backed snapshot database** as its
+single source of truth.  
+In-memory structures are strictly non-authoritative and exist only for UI
+comfort during a live session.
+
+This design prevents spam amplification, memory exhaustion, and state
+desynchronization across restarts.
+
+---
+
+### 6.9.1 Source of truth
+
+- **Authoritative state**: on-disk snapshot database
+- **Non-authoritative state**: RAM cache (`g_mns_inbox`)
+
+The RAM cache may be cleared at any time without data loss.
+All persistence, pruning, and acknowledgements operate on disk only.
+
+---
+
+### 6.9.2 Snapshot database key spaces
+
+The snapshot database is organized into three ordered key spaces.
+
+#### a) Main record (`m`)
+Stores the full inbox entry.
+
+Key format:
+- `m + msgid`
+
+Stored data includes:
+- encrypted payload
+- `time_received`
+- `recipient_kid`
+- `sender_kid` (optional)
+- `sender_identity` (optional)
+- `from_peer`
+
+---
+
+#### b) Time index (`t`)
+Ordered index used for TTL and global inbox limits.
+
+Key format:
+- `t + time_be + msgid`
+
+Enforced limits:
+- **TTL**: 48 hours
+- **Global inbox cap**: 2000 messages
+
+Oldest entries are pruned first.
+
+---
+
+#### c) Sender index (`s`)
+Ordered index used to cap messages per sender.
+
+Key format:
+- `s + sender_kid + time_be + msgid`
+
+Enforced limits:
+- **Maximum 50 messages per sender**
+
+When the cap is exceeded, the oldest messages from that sender are removed.
+
+---
+
+### 6.9.3 Atomic deletion and ACK semantics
+
+When a message is acknowledged or deleted, **all related keys are removed
+atomically**:
+
+- main record (`m`)
+- time index (`t`)
+- sender index (`s`), if present
+
+This guarantees:
+- no orphaned index entries
+- no index inflation
+- correct per-sender counts at all times
+
+The RPC:
+
+- `mns_inbox_snapshot_delete`
+
+operates only on the daemon snapshot database and never touches the wallet
+database.
+
+---
+
+### 6.9.4 Pruning strategy
+
+Pruning is enforced through two complementary mechanisms.
+
+#### Time-based and global pruning
+- Applied via the time index (`t`)
+- Enforces TTL (48h) and global cap (2000)
+- Deterministic, ordered, and cheap
+
+#### Per-sender pruning
+- Applied via the sender index (`s`)
+- Enforces max 50 messages per sender
+- Executed opportunistically during insertion
+- Avoids global sender scans
+
+No background thread is required.
+
+---
+
+### 6.9.5 Anti-spam and abuse resistance
+
+The inbox storage layer participates directly in abuse mitigation:
+
+- Hard bounds on disk growth
+- Deterministic pruning order
+- No unbounded maps or vectors
+- Deduplication by `msgid = Hash(payload)`
+
+Combined with network-level rate limiting, this prevents inbox flooding,
+sender amplification attacks, and long-term storage abuse.
+
+---
+
+### 6.9.6 RAM vs disk responsibilities
+
+Disk snapshot database:
+- authoritative inbox state
+- persistence across restarts
+- used for GUI reloads and ACK logic
+
+RAM cache (`g_mns_inbox`):
+- live UI updates
+- session-local convenience only
+- safe to discard at any time
+
+RAM state must never be trusted for correctness.
+
+---
+
+### 6.9.7 Security guarantees
+
+This design guarantees:
+
+- bounded storage growth
+- no orphaned indexes
+- no sender-based spam amplification
+- deterministic cleanup
+- safe restart and crash recovery
+- predictable GUI behavior
+
+The inbox system is intentionally disk-first and defensive by design.
+
+## 6.10) Messaging rate-limit profiles
+
+MNS messaging enforces multiple concurrent rate limits to ensure
+spam resistance, fairness, and predictable resource usage.
+
+The limits below describe the recommended **“Normal chat, ultra strict”**
+profile used by default.
+
+---
+
+### 6.10.1 Snapshot storage limits (disk)
+
+These limits apply to the off-chain inbox snapshot database.
+
+- Maximum messages per sender: **50**
+- Maximum total snapshot size: **2000 messages**
+- Snapshot TTL: **48 hours**
+
+Older messages are pruned deterministically using ordered indexes.
+
+---
+
+### 6.10.2 Sender-based message rate limits
+
+Applied when the sender identity (`sender_kid`) is known.
+
+- Short burst limit: **5 messages per 10 seconds**
+- Sustained limit: **30 messages per 10 minutes**
+
+Purpose:
+- Prevent sender-based spam
+- Limit automated flooding from a single identity
+- Still allow normal human chat patterns
+
+---
+
+### 6.10.3 Peer-based message rate limits
+
+Applied per connected peer (NodeId), regardless of identity.
+
+- Short burst limit: **50 messages per 10 seconds**
+- Sustained limit: **200 messages per 10 minutes**
+
+Purpose:
+- Prevent a single peer from flooding messages
+- Limit abuse from misbehaving or compromised nodes
+
+---
+
+### 6.10.4 Global message rate limits
+
+Applied across all peers and identities.
+
+- Short burst limit: **200 messages per 10 seconds**
+- Sustained limit: **1000 messages per 10 minutes**
+
+Purpose:
+- Protect global resources
+- Prevent coordinated flood attacks
+- Ensure predictable CPU and memory usage
+
+---
+
+### 6.10.5 Enforcement model
+
+- All limits are enforced independently
+- Hitting any limit causes message drop
+- Severe or repeated violations may trigger peer penalties
+- Rate-limit checks are cheap and bounded
+
+This layered approach ensures that:
+- no single sender can dominate the inbox
+- no peer can overwhelm the node
+- no coordinated attack can exhaust disk or memory
 
 ---
 
