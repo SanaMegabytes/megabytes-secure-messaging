@@ -27,6 +27,7 @@ Below is the complete list of RPC commands implemented for OFF-CHAIN encrypted m
 - **mns_inbox_snapshot** - Try to decrypt wallet pending OFF-CHAIN MNS messages and move them into the wallet inbox.
 - **mns_inbox_snapshot_delete** - Delete snapshot msgid.
 - **mns_wallet_pending_add** - Import ciphertext-only OFF-CHAIN MNS messages from the in db level inbox into wallet pending storage.
+- **mns_wallet_pending_list** - List ciphertext-only MNS pending messages stored in this wallet (metas only).
 - **mns_inbox_process_pending** -- (decrypt/import into wallet inbox).
 
 Convenience RPC:
