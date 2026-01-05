@@ -6,8 +6,7 @@ Megabytes Secure Messaging (MMSG) enables **fully private, wallet-to-wallet comm
 
 Messages are **never stored on-chain**, **never routed through centralized servers**, and can only be decrypted by the intended recipient’s wallet.
 
-In simple terms:  
-**a secure, encrypted chat system built directly into the Megabytes blockchain ecosystem.**
+In simple terms:  **a secure, encrypted chat system built directly into the Megabytes blockchain ecosystem.**
 
 ---
 
