@@ -122,6 +122,8 @@ Megabytes Secure Messaging is built around the following security guarantees:
 
 The primary attack surface is limited to the user’s wallet environment.
 
+For details on MNS security design, bounds enforcement, and anti-abuse mechanisms, see [MNS_SECURITY.md](MNS_SECURITY.md).
+
 ---
 
 ## Threat Model
