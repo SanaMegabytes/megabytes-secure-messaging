@@ -24,6 +24,56 @@ Non-goals / out-of-scope (current):
 
 ---
 
+## 1.1 Defensive Design & Hardening Measures
+
+MNS and MMSG are designed with a **defensive-first mindset**.  
+All off-chain components assume that network inputs may be malformed, malicious, replayed, or intentionally crafted to exhaust resources.
+
+The system enforces **strict bounds, caps, and validation at every layer**.
+
+### Input validation & bounds checking
+- All network payloads are validated before parsing.
+- Length-prefixed fields (CompactSize vectors, signatures, ciphertexts) are **strictly bounded**.
+- Signature vectors are capped to prevent oversized allocations.
+- Invalid or malformed frames are rejected early with minimal processing cost.
+- Authentication (MAC) is verified **before** any decryption attempt.
+
+### Memory safety & bounded structures
+- No unbounded vectors, maps, or caches are allowed.
+- All in-memory indexes enforce **hard maximum sizes**.
+- Presence index entries and candidate lists are capped.
+- Abuse tracking structures use sliding windows with pruning.
+
+### Disk-first inbox design
+- The off-chain inbox snapshot database is the **single source of truth**.
+- RAM caches are strictly non-authoritative and may be dropped at any time.
+- All inbox operations (ACK, delete, prune) operate on disk-backed ordered indexes.
+- Atomic deletion removes all associated index entries to prevent orphaned data.
+
+### Deterministic pruning & limits
+- Global inbox size is capped.
+- Per-sender inbox limits are enforced.
+- Time-based TTL pruning removes stale messages deterministically.
+- Oldest entries are always pruned first using ordered indexes.
+
+### Rate limiting & abuse resistance
+- Per-peer rate limits prevent message flooding.
+- Per-identity throttles limit repeated updates from the same identity.
+- Burst detection escalates penalties automatically.
+- Identity churn detection prevents bypassing limits via key rotation.
+- Global message caps protect node-wide resources.
+
+### Fail-safe behavior
+- On validation failure, messages are dropped without partial state updates.
+- No background threads are required for cleanup.
+- Restarting the node always restores a consistent inbox state from disk.
+
+These measures ensure that MNS remains:
+- resistant to memory exhaustion attacks
+- robust against malformed or malicious inputs
+- predictable under high load
+- safe to operate continuously without manual intervention
+
 ## 2) Threat model
 
 ### 2.1 Network attacker
