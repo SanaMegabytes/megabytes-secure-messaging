@@ -28,7 +28,7 @@ Non-goals / out-of-scope (current):
 
 This document includes several defensive layers designed to keep MNS/MMSG robust under hostile network conditions:
 
-- **Strict parsing & bounded inputs** (presence + message frames): see **§4–§6**
+- **Strict parsing & bounded inputs** (presence + message frames): see **see §4 (presence) and §6 (messages)**
 - **Bounded memory indexes & caps** (presence index, candidates, per-peer state): see **§4.4** and **§5.6**
 - **Disk-first inbox snapshot (authoritative storage)** with atomic deletion and deterministic pruning: see **§6.9**
 - **Messaging rate-limit profiles** (sender/peer/global limits): see **§6.10**
